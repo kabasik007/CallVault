@@ -16,6 +16,7 @@ import android.os.Binder
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Process
+import com.baba.callvault.BuildConfig
 import com.baba.callvault.services.recording.handoff.HandoffReceiver
 import com.baba.callvault.services.recording.handoff.TrackAProbe
 import com.baba.callvault.utils.AppLogger
@@ -162,7 +163,7 @@ class RecorderBinderProvider : ContentProvider() {
         private const val TAG = "CV:RecorderConn"
 
         /** Provider authority registered in the manifest; the daemon resolves "<authority>". */
-        const val AUTHORITY = "com.baba.callvault.recorder"
+        val AUTHORITY: String = BuildConfig.APPLICATION_ID + ".recorder"
 
         /** Mirrors ShizukuProvider.METHOD_SEND_BINDER. */
         const val METHOD_SEND_BINDER = "sendBinder"

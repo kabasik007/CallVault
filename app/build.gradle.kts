@@ -132,6 +132,9 @@ val ciBuildNumber = providers.gradleProperty("ciBuildNumber").orElse("Local")
 // run on a device that is already carrying a working release build. Off by default: it must not
 // change the ordinary `installDebug` loop, which deliberately reinstalls over the top.
 val isolateTestApp = providers.gradleProperty("isolateTestApp").isPresent
+// Opt-in, independently installable developer APK. Never used for a production release.
+val forkDevApk = providers.gradleProperty("forkDevApk").isPresent
+if (forkDevApk && isolateTestApp) throw GradleException("Choose either -PforkDevApk or -PisolateTestApp")
 
 android {
     namespace = "com.baba.callvault"
@@ -161,6 +164,7 @@ android {
         // build resolves to exactly the string RecorderBinderProvider.AUTHORITY hardcodes, so release
         // output is unchanged.
         manifestPlaceholders["recorderAuthority"] = "com.baba.callvault.recorder"
+        manifestPlaceholders["forkAppLabel"] = "@string/app_name"
 
         buildConfigField("String", "CI_BUILD_NUMBER", "\"${ciBuildNumber.get()}\"")
 
@@ -240,6 +244,11 @@ android {
         // everywhere. Plain `installDebug` is likewise unaffected, so the normal
         // reinstall-over-the-top dev loop still works.
         debug {
+            if (forkDevApk) {
+                applicationIdSuffix = ".zilla"
+                manifestPlaceholders["recorderAuthority"] = "com.baba.callvault.zilla.recorder"
+                manifestPlaceholders["forkAppLabel"] = "Zilla Recorder DEV"
+            }
             if (isolateTestApp) {
                 applicationIdSuffix = ".instrtest"
                 // Two installs cannot share a ContentProvider authority. Only the isolated build

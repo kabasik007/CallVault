@@ -43,6 +43,18 @@ Do not flip `ForkUpdatePolicy.ENABLED` until the fork owns its signing key,
 an independent GitHub Actions release is built, and a full installation/
 upgrade test has passed. Never copy the upstream author's private key.
 
+## Isolated test APK
+
+The workflow `.github/workflows/fork-debug-apk.yml` builds with `-PforkDevApk`.
+This debug-only package is `com.baba.callvault.zilla`, with matching IPC
+authority `com.baba.callvault.zilla.recorder`. The app label is
+`Zilla Recorder DEV`. Daemon cleanup now filters by exact installed APK path.
+
+This is an ephemeral debug-signed APK, **not a production release**. GitHub CI
+debug signing keys can change between runs, so updates may require uninstall
+and destroy all app-local data. A separately managed persistent release key is
+required for daily use.
+
 ## Validation
 
 - `./gradlew :app:testDebugUnitTest`
