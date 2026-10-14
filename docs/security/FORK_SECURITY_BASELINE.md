@@ -11,10 +11,13 @@ Source code review is not equivalent to verification of a downloaded APK.
 1. **Untrusted Binder injection:** `RecorderBinderProvider.call("sendBinder")`
    and `sendHandoff` now require a trusted Android UID before unpacking
    a received Binder. The trust policy is JVM-unit-tested.
-2. **Foreign APK update channel:** the fork cannot check for or install
+2. **Local copy catalog correctness:** both immediate and scheduled SAF cloud
+   sync retain the local catalog reference if the provider refuses to delete
+   a device copy in cloud-only mode.
+3. **Foreign APK update channel:** the fork cannot check for or install
    upstream in-app updates. The default setting is off and
    `UpdateManager` additionally fails closed for direct callers.
-3. **Future release links:** GitHub release URLs point to the owner's fork.
+4. **Future release links:** GitHub release URLs point to the owner's fork.
    They do **not** enable upgrades while `ForkUpdatePolicy.ENABLED=false`.
 
 ## Remaining work before installing on a primary phone
