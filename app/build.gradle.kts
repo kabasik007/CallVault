@@ -381,6 +381,18 @@ aboutLibraries {
 // Fails the build when a locale drifts from the base strings. See the script for why.
 apply(from = rootProject.file("gradle/translation-coverage.gradle.kts"))
 
+// Robolectric executes on the desktop JVM, not on Android. The Android
+// Conscrypt artifact contains only device-native JNI; injecting it into the
+// host test runtime makes every Robolectric test fail with
+// UnsatisfiedLinkError: no conscrypt_jni in java.library.path.
+// Keep conscrypt-android in the APK, but replace it with a JVM-native build
+// on *unit-test runtime classpaths only*.
+configurations.configureEach {
+    if (name.endsWith("UnitTestRuntimeClasspath")) {
+        exclude(group = "org.conscrypt", module = "conscrypt-android")
+    }
+}
+
 dependencies {
 
     // Shizuku: an optional second source of shell-uid privileges, for phones that already run it.
@@ -440,6 +452,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("org.robolectric:robolectric:4.14")
+    testImplementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2")
     testImplementation("androidx.test:core:1.6.1")
     // Lets tests exercise code that enqueues work. Without it WorkManager throws "not initialized"
     // the moment a test touches a scheduler, which would otherwise push that code out of test reach.
