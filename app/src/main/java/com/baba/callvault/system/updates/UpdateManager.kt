@@ -61,6 +61,9 @@ object UpdateManager {
      * @return the newer release when one exists, else null.
      */
     fun checkForUpdate(context: Context, reconcile: Boolean = true): GitHubReleases.ReleaseInfo? {
+        // Fail closed in this development fork. The upstream publisher's certificate
+        // must never be treated as our own release-signing identity.
+        if (!ForkUpdatePolicy.ENABLED) return null
         val preferences = AppPreferences(context)
         if (reconcile) reconcilePendingState(context, preferences)
 
@@ -93,6 +96,11 @@ object UpdateManager {
         allowInteractiveFallback: Boolean,
         onProgress: (Int) -> Unit = {}
     ): Boolean {
+        // Protect direct callers too; disabling background checks alone is insufficient.
+        if (!ForkUpdatePolicy.ENABLED) {
+            AppLogger.w(TAG, "In-app installation is disabled until this fork has its own signed releases")
+            return false
+        }
         val preferences = AppPreferences(context)
         val apk = downloadFile(context, release.tag)
         // A resumable partial persists across attempts, but only for THIS release — clear others.
