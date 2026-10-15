@@ -1,0 +1,75 @@
+name: Zilla Recorder - Android test APK
+
+on:
+  push:
+    branches:
+      - security/phase1-fork-hardening
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug-apk:
+    name: Run tests and build independent debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout and native submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Validate Gradle and cache dependencies
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install SDK, NDK and CMake
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1" "ndk;27.2.12479018"
+
+      - name: Smoke-test changed security and storage policies
+        run: ./gradlew :app:testDebugUnitTest -PforkDevApk --tests "com.baba.callvault.server.RecorderBinderCallerPolicyTest" --tests "com.baba.callvault.system.storage.CloudCopyPolicyTest" --tests "com.baba.callvault.transcription.TranscriptionLanguageChoiceTest" --no-daemon --stacktrace
+
+      - name: Verify translation coverage
+        run: ./gradlew :app:checkTranslations --no-daemon --stacktrace
+
+      - name: Assemble Zilla Recorder DEV
+        run: ./gradlew :app:assembleDebug -PforkDevApk --no-daemon --stacktrace
+
+      - name: Upload signed debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zilla-Recorder-DEV-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      # Do not suppress the legacy failures: record them, but keep the already
+      # assembled *development* APK available for device-level diagnosis.
+      - name: Full upstream regression suite (diagnostic, non-blocking)
+        continue-on-error: true
+        run: ./gradlew :app:testDebugUnitTest -PforkDevApk --no-daemon --stacktrace
+
+      - name: Upload JVM test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zilla-Recorder-JVM-test-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
+
+# The CI debug keystore is temporary and NOT a production release identity.

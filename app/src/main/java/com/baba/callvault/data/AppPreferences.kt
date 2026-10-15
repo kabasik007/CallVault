@@ -20,6 +20,7 @@ import com.baba.callvault.transcription.TranscriptionEstimate
 import com.baba.callvault.transcription.TranscriptionLanguageChoice
 import com.baba.callvault.transcription.model.TranscriptionModel
 import com.baba.callvault.ui.navigation.HomeSection
+import com.baba.callvault.system.updates.ForkUpdatePolicy
 import com.baba.callvault.utils.AppLogger
 import org.json.JSONArray
 import org.json.JSONObject
@@ -250,7 +251,7 @@ class AppPreferences(context: Context) {
         // --- In-app updates ---
         // Check for new GitHub releases (a tiny daily JSON query). ON by default; a found update
         // surfaces as a Home banner + notification and installs only on an explicit user tap.
-        const val UPDATE_CHECK_ENABLED = true
+        const val UPDATE_CHECK_ENABLED = false
 
         // --- Persistent recorder server (CallVault Plan 5) ---
         // OFF by default: when false the existing local recording path runs unchanged. When true the
@@ -601,8 +602,8 @@ class AppPreferences(context: Context) {
      * existing local recording pipeline runs unchanged; when true the recording layer drives the
      * detached daemon ([com.baba.callvault.server.RecorderServer]) over binder.
      */
-    fun isUpdateCheckEnabled() = getBoolean(Key.UPDATE_CHECK_ENABLED, DefaultsValue.UPDATE_CHECK_ENABLED)
-    fun setUpdateCheckEnabled(enabled: Boolean) = setBoolean(Key.UPDATE_CHECK_ENABLED, enabled)
+    fun isUpdateCheckEnabled() = ForkUpdatePolicy.ENABLED && getBoolean(Key.UPDATE_CHECK_ENABLED, DefaultsValue.UPDATE_CHECK_ENABLED)
+    fun setUpdateCheckEnabled(enabled: Boolean) = setBoolean(Key.UPDATE_CHECK_ENABLED, enabled && ForkUpdatePolicy.ENABLED)
 
     /** Release tag of a known-newer version (drives the Home banner + notification); null = none. */
     fun getAvailableUpdateTag() = getString(Key.AVAILABLE_UPDATE_TAG)

@@ -16,6 +16,7 @@ import android.os.Binder
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Process
+import com.baba.callvault.BuildConfig
 import com.baba.callvault.services.recording.handoff.HandoffReceiver
 import com.baba.callvault.services.recording.handoff.TrackAProbe
 import com.baba.callvault.utils.AppLogger
@@ -53,6 +54,16 @@ class RecorderBinderProvider : ContentProvider() {
      * unmarshals against the framework classloader and returns null (the classic Shizuku gotcha).
      */
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        // Binder delivery must come from our shell-UID daemon, Android system, or this app.
+        // Without this guard any third-party app could inject its own IRecorderService
+        // through the exported provider and replace RecorderConnection.service.
+        val callerUid = Binder.getCallingUid()
+        if ((method == METHOD_SEND_BINDER || method == METHOD_SEND_HANDOFF) &&
+            !RecorderBinderCallerPolicy.isTrusted(callerUid, Process.myUid())
+        ) {
+            AppLogger.w(TAG, "Rejected '$method' from untrusted uid=$callerUid")
+            return Bundle()
+        }
         if (extras == null) { AppLogger.w(TAG, "Provider.call ignored method='$method' (null extras)"); return Bundle() }
         when (method) {
             METHOD_SEND_BINDER -> handleSendBinder(extras)
@@ -152,7 +163,7 @@ class RecorderBinderProvider : ContentProvider() {
         private const val TAG = "CV:RecorderConn"
 
         /** Provider authority registered in the manifest; the daemon resolves "<authority>". */
-        const val AUTHORITY = "com.baba.callvault.recorder"
+        val AUTHORITY: String = BuildConfig.APPLICATION_ID + ".recorder"
 
         /** Mirrors ShizukuProvider.METHOD_SEND_BINDER. */
         const val METHOD_SEND_BINDER = "sendBinder"

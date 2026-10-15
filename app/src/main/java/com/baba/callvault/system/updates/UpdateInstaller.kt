@@ -96,7 +96,7 @@ object UpdateInstaller {
         // background-launch limits an app itself is subject to.
         val pkg = context.packageName
         val grant = "pm grant $pkg android.permission.WRITE_SECURE_SETTINGS"
-        val command = "pm install -r -S $size && { $grant; am start -n $pkg/$pkg.MainActivity; }"
+        val command = "pm install -r -S $size && { $grant; am start -n $pkg/com.baba.callvault.MainActivity; }"
 
         // exec: (raw, no PTY) — REQUIRED for streaming the binary APK to stdin; shell: would corrupt
         // or prematurely close the stream (the "Stream closed mid-send" failure this fixes).

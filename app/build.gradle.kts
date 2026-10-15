@@ -132,6 +132,9 @@ val ciBuildNumber = providers.gradleProperty("ciBuildNumber").orElse("Local")
 // run on a device that is already carrying a working release build. Off by default: it must not
 // change the ordinary `installDebug` loop, which deliberately reinstalls over the top.
 val isolateTestApp = providers.gradleProperty("isolateTestApp").isPresent
+// Opt-in, independently installable developer APK. Never used for a production release.
+val forkDevApk = providers.gradleProperty("forkDevApk").isPresent
+if (forkDevApk && isolateTestApp) throw GradleException("Choose either -PforkDevApk or -PisolateTestApp")
 
 android {
     namespace = "com.baba.callvault"
@@ -161,6 +164,7 @@ android {
         // build resolves to exactly the string RecorderBinderProvider.AUTHORITY hardcodes, so release
         // output is unchanged.
         manifestPlaceholders["recorderAuthority"] = "com.baba.callvault.recorder"
+        manifestPlaceholders["forkAppLabel"] = "@string/app_name"
 
         buildConfigField("String", "CI_BUILD_NUMBER", "\"${ciBuildNumber.get()}\"")
 
@@ -240,6 +244,11 @@ android {
         // everywhere. Plain `installDebug` is likewise unaffected, so the normal
         // reinstall-over-the-top dev loop still works.
         debug {
+            if (forkDevApk) {
+                applicationIdSuffix = ".zilla"
+                manifestPlaceholders["recorderAuthority"] = "com.baba.callvault.zilla.recorder"
+                manifestPlaceholders["forkAppLabel"] = "Zilla Recorder DEV"
+            }
             if (isolateTestApp) {
                 applicationIdSuffix = ".instrtest"
                 // Two installs cannot share a ContentProvider authority. Only the isolated build
@@ -372,6 +381,18 @@ aboutLibraries {
 // Fails the build when a locale drifts from the base strings. See the script for why.
 apply(from = rootProject.file("gradle/translation-coverage.gradle.kts"))
 
+// Robolectric executes on the desktop JVM, not on Android. The Android
+// Conscrypt artifact contains only device-native JNI; injecting it into the
+// host test runtime makes every Robolectric test fail with
+// UnsatisfiedLinkError: no conscrypt_jni in java.library.path.
+// Keep conscrypt-android in the APK, but replace it with a JVM-native build
+// on *unit-test runtime classpaths only*.
+configurations.configureEach {
+    if (name.endsWith("UnitTestRuntimeClasspath")) {
+        exclude(group = "org.conscrypt", module = "conscrypt-android")
+    }
+}
+
 dependencies {
 
     // Shizuku: an optional second source of shell-uid privileges, for phones that already run it.
@@ -431,6 +452,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("org.robolectric:robolectric:4.14")
+    testImplementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2")
     testImplementation("androidx.test:core:1.6.1")
     // Lets tests exercise code that enqueues work. Without it WorkManager throws "not initialized"
     // the moment a test touches a scheduler, which would otherwise push that code out of test reach.

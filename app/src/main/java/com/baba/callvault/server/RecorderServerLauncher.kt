@@ -77,8 +77,11 @@ object RecorderServerLauncher {
      * (`…RecorderServer …`) does. Run only on the launch path (binder not connected), and only AFTER
      * [AdbShell.waitForShellReady] confirms the shell answers, so pgrep can't hang mid-restart.
      */
+    // Scoped by installed APK path, so the fork cannot kill the upstream recorder.
     private const val KILL_STALE_CMD =
-        "p=\$(pgrep -f 'com.baba.callvault.server.Recorder[S]erver' 2>/dev/null); [ -n \"\$p\" ] && kill \$p 2>/dev/null; true"
+        "for p in \$(pgrep -f 'com.baba.callvault.server.Recorder[S]erver' 2>/dev/null); do " +
+            "tr '\\000' '\\n' </proc/\$p/cmdline 2>/dev/null | grep -Fxq -- '%1\$s' && kill \$p 2>/dev/null; " +
+            "done; true"
 
     /** Drain cap for [killStaleDaemons]; the command isn't backgrounded, so it usually EOFs sooner. */
     private const val KILL_DRAIN_MS = 1500L
@@ -322,7 +325,15 @@ object RecorderServerLauncher {
      */
     private fun killStaleDaemons(context: Context) {
         runCatching {
-            AdbShell.openShell(context, KILL_STALE_CMD).use { shell ->
+            // The APK path comes from Android's PackageManager, never user input.
+            // Refuse unsafe/unexpected paths instead of interpolating shell metacharacters.
+            val apkPath = context.applicationInfo.sourceDir
+            if (!apkPath.matches(Regex("[A-Za-z0-9_./~+=-]+"))) {
+                AppLogger.w(TAG, "Skipping stale-daemon cleanup: unexpected APK path")
+                return
+            }
+            val command = String.format(KILL_STALE_CMD, apkPath)
+            AdbShell.openShell(context, command).use { shell ->
                 val deadline = System.currentTimeMillis() + KILL_DRAIN_MS
                 shell.openInputStream().use { input ->
                     val buf = ByteArray(128)

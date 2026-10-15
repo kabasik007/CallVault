@@ -1,3 +1,5 @@
+> **Development fork — kabasik007:** This repository tracks [madkongo/CallVault](https://github.com/madkongo/CallVault). The code is under security hardening; no independent signed release has been approved. In-app update checks and installation are intentionally disabled until this fork has its own signing certificate, pinned verifier, and release pipeline. See [security baseline](docs/security/FORK_SECURITY_BASELINE.md). Do not install unofficial test builds on a phone holding sensitive calls.
+
 <div align="center">
 
 <img src="docs/screenshots/banner.svg" alt="CallVault" width="100%"/>
