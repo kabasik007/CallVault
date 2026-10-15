@@ -22,6 +22,7 @@ object LanguageScript {
         "he" to Character.UnicodeScript.HEBREW,
         "ar" to Character.UnicodeScript.ARABIC,
         "ru" to Character.UnicodeScript.CYRILLIC,
+        "uk" to Character.UnicodeScript.CYRILLIC,
         "zh" to Character.UnicodeScript.HAN,
     )
 
